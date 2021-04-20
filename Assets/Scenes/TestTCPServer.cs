@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using UniRx;
 using UnityEngine;
 
 namespace Scenes
@@ -26,13 +27,18 @@ namespace Scenes
 
         private void WaitAndProcessNewClients()
         {
-            while (true)
-            {
-                var client = listener.AcceptTcpClient();
-                var clientObject = new ClientObject(client);
-                Debug.LogError("new client connected");
-                Task.Run(clientObject.Process);
-            }
+            var o = Observable.Create<ClientObject>(
+                observer =>
+                {
+                    while (true)
+                    {
+                        var client = listener.AcceptTcpClient();
+                        var clientObject = new ClientObject(client);
+                        Debug.LogError("new client connected");
+                        observer.OnNext(clientObject);
+                    }
+                });
+            o.Subscribe(client => Task.Run(client.Process));
         }
 
         private void OnDestroy()
