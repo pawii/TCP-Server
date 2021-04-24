@@ -27,11 +27,11 @@ namespace Scenes
                     do
                     {
                         var bytes = stream.Read(data, 0, data.Length);
-                        message = Encoding.Unicode.GetString(data, 0, bytes);
+                        message = Encoding.UTF8.GetString(data, 0, bytes);
                     }
                     while (stream.DataAvailable);
 
-                    Debug.LogError(message);
+                    Debug.LogError(JsonUtility.FromJson<NetworkMessage>(message));
                 }
                 Debug.LogError("client disconnected");
             }
