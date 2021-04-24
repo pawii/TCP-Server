@@ -1,4 +1,4 @@
-﻿namespace Scenes
+﻿namespace Replication
 {
     public enum NetworkMessage 
     {

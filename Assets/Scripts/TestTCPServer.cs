@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 
-namespace Scenes
+namespace Scripts
 {
     public class TestTCPServer : MonoBehaviour
     {

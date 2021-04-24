@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Net.Sockets;
 using System.Text;
+using Replication;
 using UnityEngine;
 
-namespace Scenes
+namespace Scripts
 {
     public class ClientObject
     {
