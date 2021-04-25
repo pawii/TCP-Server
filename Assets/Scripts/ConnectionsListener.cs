@@ -1,36 +1,37 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using System.Threading;
 using UniRx;
 using UnityEngine;
 
 namespace Scripts
 {
-    public class ConnectionsListener 
+    public static class ConnectionsListener 
     {
-        private const int Port = 8888;
-        private static readonly IPAddress IP = IPAddress.Parse("127.0.0.1");
-        private static readonly Encoding ConnectionEncoding = Encoding.UTF8;
-        
-        private readonly TcpListener listener;
-
-        public ConnectionsListener()
+        public static IObservable<TcpClient> StartListeningAsObservable(
+            CancellationToken cancellationToken, 
+            IPAddress ip, 
+            int port)
         {
-            listener = new TcpListener(IP, Port);
-        }
-
-        public void StartListening()
-        {
-        }
-
-        private void ListeningTask()
-        {
-            while (true)
-            {
-                var client = listener.AcceptTcpClient();
-                var clientObject = new ClientObject(client);
-                Debug.LogError("new client connected");
-            }
+            return Observable.Create<TcpClient>(
+                observer =>
+                {
+                    var listener = new TcpListener(ip, port);
+                    listener.Start();
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        if (listener.Pending())
+                        {
+                            observer.OnNext(listener.AcceptTcpClient());
+                        }
+                    }
+                    observer.OnCompleted();
+                    return Disposable.Create(() => listener.Stop()); 
+                })
+                .Do(
+                    client => Debug.LogError("new tcp connection"),
+                    () => Debug.LogError("finish listening"));
         }
     }
 }

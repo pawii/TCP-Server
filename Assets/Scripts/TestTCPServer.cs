@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
+using System.Collections;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Replication;
 using UniRx;
 using UnityEngine;
 
@@ -11,40 +11,45 @@ namespace Scripts
 {
     public class TestTCPServer : MonoBehaviour
     {
-        private const int Port = 8888;
-        private static readonly IPAddress IP = IPAddress.Parse("127.0.0.1");
-        
-        private TcpListener listener;
-        private Task connectClientsTask;
+        [SerializeField] private ConnectionConfig connectionConfig;
 
+        private CancellationTokenSource cts;
+        
         private void Start()
         {
-            listener = new TcpListener(IP, Port);
+            cts = new CancellationTokenSource();
             
-            listener.Start();
-            connectClientsTask = Task.Run(WaitAndProcessNewClients);
+            ConnectionsListener
+                .StartListeningAsObservable(cts.Token, connectionConfig.IP, connectionConfig.Port)
+                .SubscribeOn(Scheduler.ThreadPool)
+                .ObserveOnMainThread()
+                .Subscribe(
+                    client =>
+                    {
+                        ClientAsObservable
+                            .Process(client, connectionConfig.Encoding, cts.Token)
+                            .SubscribeOn(Scheduler.ThreadPool)
+                            .ObserveOnMainThread()
+                            .Subscribe(
+                                networkMessage =>
+                                {
+                                    var tId3 = Thread.CurrentThread.ManagedThreadId;
+                                    Debug.LogError(networkMessage.ToString());
+                                });
+                    });
         }
 
-        private void WaitAndProcessNewClients()
+        private void Update()
         {
-            var o = Observable.Create<ClientObject>(
-                observer =>
-                {
-                    while (true)
-                    {
-                        var client = listener.AcceptTcpClient();
-                        var clientObject = new ClientObject(client);
-                        Debug.LogError("new client connected");
-                        observer.OnNext(clientObject);
-                    }
-                });
-            o.Subscribe(client => Task.Run(client.Process));
+            if (Input.GetKey(KeyCode.S))
+            {
+                cts.Cancel();
+            }
         }
 
         private void OnDestroy()
         {
-            connectClientsTask.Dispose();
-            listener.Stop();
+            cts.Cancel();
         }
     }
 }
