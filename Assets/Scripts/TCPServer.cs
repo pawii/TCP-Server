@@ -9,6 +9,7 @@ namespace Scripts
     public class TCPServer : MonoBehaviour
     {
         [SerializeField] private ConnectionConfig connectionConfig;
+        [SerializeField] private NetworkMessagesHandler networkMessagesHandler;
 
         private CancellationTokenSource cts;
         
@@ -32,12 +33,7 @@ namespace Scripts
                 .ListenMessages(client, connectionConfig.Encoding, cts.Token)
                 .SubscribeOn(clientScheduler)
                 .ObserveOnMainThread()
-                .Subscribe(
-                    networkMessage =>
-                    {
-                        Debug.Log($"Thread: {Thread.CurrentThread.ManagedThreadId}; " +
-                                  $"Message: {networkMessage.ToString()}");
-                    });
+                .Subscribe(networkMessagesHandler.HandleMessage);
             
             ClientHandler
                 .ValidatingConnection(client, cts.Token)
