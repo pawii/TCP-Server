@@ -13,23 +13,25 @@ namespace Scripts
         
         private void Start()
         {
+            Debug.Log($"Main Thread Id: {Thread.CurrentThread.ManagedThreadId}");
             cts = new CancellationTokenSource();
             
-            ConnectionsListener
-                .StartListeningAsObservable(cts.Token, connectionConfig.IP, connectionConfig.Port)
+            CustomTcpListener
+                .StartListening(connectionConfig.IP, connectionConfig.Port, cts.Token)
                 .SubscribeOn(Scheduler.ThreadPool)
                 .ObserveOnMainThread()
                 .Subscribe(
                     client =>
                     {
-                        ClientAsObservable
-                            .Process(client, connectionConfig.Encoding, cts.Token)
+                        ClientHandler
+                            .StartHandling(client, connectionConfig.Encoding, cts.Token)
                             .SubscribeOn(Scheduler.ThreadPool)
                             .ObserveOnMainThread()
                             .Subscribe(
                                 networkMessage =>
                                 {
-                                    Debug.LogError(networkMessage.ToString());
+                                    Debug.Log($"Thread: {Thread.CurrentThread.ManagedThreadId}; " +
+                                                   $"Message: {networkMessage.ToString()}");
                                 });
                     });
         }

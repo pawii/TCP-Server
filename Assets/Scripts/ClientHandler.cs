@@ -8,9 +8,12 @@ using UnityEngine;
 
 namespace Scripts
 {
-    public static class ClientAsObservable
+    public static class ClientHandler
     {
-        public static IObservable<NetworkMessage> Process(TcpClient client, Encoding encoding, CancellationToken token)
+        public static IObservable<NetworkMessage> StartHandling(
+            TcpClient client, 
+            Encoding encoding, 
+            CancellationToken token)
         {
             return Observable.Create<NetworkMessage>(
                 observer =>
@@ -38,7 +41,8 @@ namespace Scripts
                 })
                 .Do(
                     message => { },
-                    () => Debug.LogError("Client disconnected"));
+                    ex => Debug.LogError(ex.Message),
+                    () => Debug.Log("Client disconnected"));
         }
     }
 }
