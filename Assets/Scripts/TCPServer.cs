@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Scripts
 {
-    public class TestTCPServer : MonoBehaviour
+    public class TCPServer : MonoBehaviour
     {
         [SerializeField] private ConnectionConfig connectionConfig;
 
