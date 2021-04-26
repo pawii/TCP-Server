@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -10,7 +11,9 @@ namespace Scripts
 {
     public static class ClientHandler
     {
-        public static IObservable<NetworkMessage> StartHandling(
+        private static readonly TimeSpan ConnectionValidationFrequency = TimeSpan.FromSeconds(10f);
+        
+        public static IObservable<NetworkMessage> ListenMessages(
             TcpClient client, 
             Encoding encoding, 
             CancellationToken token)
@@ -43,6 +46,31 @@ namespace Scripts
                     message => { },
                     ex => Debug.LogError(ex.Message),
                     () => Debug.Log("Client disconnected"));
+        }
+
+        public static IObservable<Unit> ValidatingConnection(TcpClient client, CancellationToken token)
+        {
+            var stream = client.GetStream();
+            
+            return Observable
+                .Interval(ConnectionValidationFrequency)
+                .TakeWhile(t => client.Connected && !token.IsCancellationRequested)
+                .Do(t =>
+                {
+                    try
+                    {
+                        var data = new[] {new byte()};
+                        stream.Write(data, 0, data.Length);
+                    }
+                    catch (IOException ex)
+                    {
+                        stream.Close();
+                        stream.Dispose();
+                        client.Close();
+                        client.Dispose();
+                    }
+                })
+                .Select(t => Unit.Default);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Net.Sockets;
+using System.Threading;
 using Replication;
 using UniRx;
 using UnityEngine;
@@ -20,20 +21,28 @@ namespace Scripts
                 .StartListening(connectionConfig.IP, connectionConfig.Port, cts.Token)
                 .SubscribeOn(Scheduler.ThreadPool)
                 .ObserveOnMainThread()
+                .Subscribe(HandleClient);
+        }
+
+        private void HandleClient(TcpClient client)
+        {
+            var clientScheduler = Scheduler.ThreadPool;
+            
+            ClientHandler
+                .ListenMessages(client, connectionConfig.Encoding, cts.Token)
+                .SubscribeOn(clientScheduler)
+                .ObserveOnMainThread()
                 .Subscribe(
-                    client =>
+                    networkMessage =>
                     {
-                        ClientHandler
-                            .StartHandling(client, connectionConfig.Encoding, cts.Token)
-                            .SubscribeOn(Scheduler.ThreadPool)
-                            .ObserveOnMainThread()
-                            .Subscribe(
-                                networkMessage =>
-                                {
-                                    Debug.Log($"Thread: {Thread.CurrentThread.ManagedThreadId}; " +
-                                                   $"Message: {networkMessage.ToString()}");
-                                });
+                        Debug.Log($"Thread: {Thread.CurrentThread.ManagedThreadId}; " +
+                                  $"Message: {networkMessage.ToString()}");
                     });
+            
+            ClientHandler
+                .ValidatingConnection(client, cts.Token)
+                .SubscribeOn(clientScheduler)
+                .Subscribe();
         }
 
         private void Update()
